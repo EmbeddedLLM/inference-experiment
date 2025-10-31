@@ -61,7 +61,7 @@ def time_event(event_name: str):
 def run_vllm_server(
     model='HuggingFaceTB/SmolLM3-3B',
     count=1,
-    port=8001,
+    port=8021,
     tensor_parallel_size=1,
     gpu_memory_utilization=0.3,
     max_model_len=2048,
@@ -231,7 +231,7 @@ def prompt_model_timed(base_url: str, model: str, content: str, event_name: str,
 def warmup_model_timed(base_url: str, model: str, event_name: str):
     @time_event(event_name)
     def warm():
-        # Use extremely short one-time paths to generate trigger graphs/kernels, etc.
+        # Use extremely short generation of trigger graphs/kernels and other one-time paths
         return prompt_model(base_url, model, "warmup", max_tokens=1, min_tokens=1,
                             temperature=0.0, top_p=1.0, top_k=0, stream=False)
     return warm()
@@ -250,53 +250,62 @@ def reload_weights_model_timed(base_url: str, event_name: str):
     return reload()
 
 
-def test_with_sleep_mode(model1, model2, prompt, quant_mode: Optional[str] = None):
+def test_with_sleep_mode(model1, model2, prompt):
     prompt1 = "Can you explain why the sky is blue?"
     prompt2 = "Which is bigger? 9.9 or 9.11?"
     prompt3 = "Generate 5 horror stories consisting of 3 words only."
     print("\n=== TESTING WITH SLEEP MODE ===")
 
-    first_model, first_model_url = load_model(model1, 8001, True, 'Sleep mode first model', count=1, quantization=quant_mode)
+    first_model, first_model_url = load_model(model1, 8001, True, 'Sleep mode first model', count=1)
 
     if first_model and first_model_url:
-        # Warm up the first model immediately after loading.
+        # Warm up the first model immediately after loading
         warmup_model_timed(first_model_url, model1, 'Sleep mode first model warmup')
-        sleep_model(first_model_url)
+        # level2
+        sleep_model(first_model_url,level=2)
         
-        second_model, second_model_url = load_model(model2, 8002, True, 'Sleep mode second model', count=2, quantization=quant_mode)
+        second_model, second_model_url = load_model(model2, 8002, True, 'Sleep mode second model', count=2)
 
         if second_model and second_model_url:
             # Warm up the second model immediately after loading
             warmup_model_timed(second_model_url, model2, 'Sleep mode second model warmup')
-            sleep_model(second_model_url)
+            # level2
+            sleep_model(first_model_url,level=2)
 
-            wake_model_timed(first_model_url, "Sleep mode first model wake up1")
-            prompt_model_timed(first_model_url, model1, prompt1, 'Sleep mode first model prompt1')
-            sleep_model_timed(first_model_url, "Sleep mode first model sleep1")
+            # Round 1
+            print("\n--- Round 1 ---")
+            wake_and_reload_then_warmup_timed(first_model_url, model1, f"A Model Wake Up (1)", do_warmup=True)
+            prompt_model_timed(first_model_url, model1, prompt1, 'A Model Prompt (1)')
+            sleep_model_timed(first_model_url, "A Model Sleep (1)", level=2)
             
-            wake_model_timed(second_model_url, "Sleep mode second model wake up1")
-            prompt_model_timed(second_model_url, model2, prompt1, 'Sleep mode second model prompt1')
-            sleep_model_timed(second_model_url, "Sleep mode second model sleep1")
+            wake_and_reload_then_warmup_timed(second_model_url, model2, f"B Model Wake Up (1)", do_warmup=True)
+            prompt_model_timed(second_model_url, model2, prompt1, 'B Model Prompt (1)')
+            sleep_model_timed(second_model_url, "B Model Sleep (1)", level=2)
             
-            wake_model_timed(first_model_url, 'Sleep mode first model wake up2')
-            prompt_model_timed(first_model_url, model1, prompt2, 'Sleep mode first model prompt2')
-            sleep_model_timed(first_model_url, "Sleep mode first model sleep2")
+            # Round 2
+            print("\n--- Round 2 ---")
+            wake_and_reload_then_warmup_timed(first_model_url, model1, f"A Model Wake Up (2)", do_warmup=True)
+            prompt_model_timed(first_model_url, model1, prompt2, 'A Model Prompt (2)')
+            sleep_model_timed(first_model_url, "A Model Sleep (2)", level=2)
             
-            wake_model_timed(second_model_url, 'Sleep mode second model wake up2')
-            prompt_model_timed(second_model_url, model2, prompt2, 'Sleep mode second model prompt2')
-            sleep_model_timed(second_model_url, "Sleep mode second model sleep2")
+            wake_and_reload_then_warmup_timed(second_model_url, model2, f"B Model Wake Up (2)", do_warmup=True)
+            prompt_model_timed(second_model_url, model2, prompt2, 'B Model Prompt (2)')
+            sleep_model_timed(second_model_url, "B Model Sleep (2)", level=2)
             
-            wake_model_timed(first_model_url, 'Sleep mode first model wake up3')
-            prompt_model_timed(first_model_url, model1, prompt3, 'Sleep mode first model prompt3')
-            sleep_model_timed(first_model_url, "Sleep mode first model sleep3")
+            # Round 3
+            print("\n--- Round 3 ---")
+            wake_and_reload_then_warmup_timed(first_model_url, model1, f"A Model Wake Up (3)", do_warmup=True)
+            prompt_model_timed(first_model_url, model1, prompt3, 'A Model Prompt (3)')
+            sleep_model_timed(first_model_url, "A Model Sleep (3)", level=2)
             
-            wake_model_timed(second_model_url, 'Sleep mode second model wake up3')
-            prompt_model_timed(second_model_url, model2, prompt3, 'Sleep mode second model prompt3')
+            wake_and_reload_then_warmup_timed(second_model_url, model2, f"B Model Wake Up (3)", do_warmup=True)
+            prompt_model_timed(second_model_url, model2, prompt3, 'B Model Prompt (3)')
 
             # Cleanup
             terminate_process(second_model)
         
         terminate_process(first_model)
+
 
 
 
@@ -349,9 +358,10 @@ def wake_and_reload_then_warmup_timed(base_url: str, model: str, event_prefix: s
         if not ok_reload:
             raise RuntimeError("reload_weights failed")
 
+        # Optional: Clear the prefix cache to avoid residual status
         make_request('POST', base_url, '/reset_prefix_cache')
 
-        # Optional: Perform a very short warmup, capture images & compile cache
+        # Optional: Do a very short warmup, capture & compile cache
         if do_warmup:
             _ = prompt_model(base_url, model, "warmup", max_tokens=1, min_tokens=1,
                              temperature=0.0, top_p=1.0, top_k=0, stream=False)
@@ -359,8 +369,8 @@ def wake_and_reload_then_warmup_timed(base_url: str, model: str, event_prefix: s
     return do_wake_reload()
 
 
-# Run in non-fp8 mode, command execution: python online.py
-# Run in fp8 mode, command execution: python online.py fp8
+# Run in sleep mode level2, command execution: python online_sleep2_nosleep.py sleep2
+# Run in no sleep mode, command execution: python online_sleep2_nosleep.py nosleep
 def main():
     print("Starting VLLM Server Performance Test")
     model1 = 'Qwen/Qwen3-0.6B'
@@ -368,32 +378,36 @@ def main():
     model2 = 'microsoft/phi-3-vision-128k-instruct'
     prompt = "How many R's in Red?"
 
-    quant_arg = None 
-    if len(sys.argv) > 1 and sys.argv[1].lower() == 'fp8':
-        print("=== CONFIG: Running in FP8 MODE ===")
-        quant_arg = 'fp8'
-    else:
-        print("=== CONFIG: Running in NON-FP8 MODE (quantization=None) ===")
+    test_mode = None 
+    if len(sys.argv) > 1:
+        test_mode = sys.argv[1].lower()
     
     try:
         
-        # # Test with sleep mode
-        sleep_start = time.time()
-        test_with_sleep_mode(model1, model2, prompt, quant_arg)
-        sleep_total = time.time() - sleep_start
-        timing_data['total_sleep_mode_test'] = sleep_total
+        if test_mode == 'sleep2':
+            print("=== CONFIG: Running in SLEEP MODE (Level 2) ===")
+            sleep_start = time.time()
+            test_with_sleep_mode(model1, model2, prompt)
+            sleep_total = time.time() - sleep_start
+            timing_data['total_sleep_mode_test'] = sleep_total
         
-        # # Test without sleep mode
-        no_sleep_start = time.time()
-        test_without_sleep_mode(model1, model2, prompt)
-        no_sleep_total = time.time() - no_sleep_start
-        timing_data['total_without_sleep_mode_test'] = no_sleep_total
+        elif test_mode =='nosleep':
+            print("=== CONFIG: Running in NO SLEEP MODE ===")
+            no_sleep_start = time.time()
+            test_without_sleep_mode(model1, model2, prompt)
+            no_sleep_total = time.time() - no_sleep_start
+            timing_data['total_without_sleep_mode_test'] = no_sleep_total
+
+        else:
+            print("Error: Please specify a mode.", file=sys.stderr)
+            print("Usage: python online_sleep2_nosleep.py [sleep2 | nosleep]", file=sys.stderr)
+            sys.exit(1)
+        
 
         # Print detailed timing data as JSON
         print(f"\n=== DETAILED TIMING DATA ===")
         for key, value in timing_data.items():
             print(f"{key}\t{value:.2f}")
-
 
     except KeyboardInterrupt:
         print("\nTest interrupted")
