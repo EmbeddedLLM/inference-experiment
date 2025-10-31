@@ -10,9 +10,9 @@ Script: online_default.py
 Corresponding Result: Table 1 (Sleep mode vs No sleep mode)
 
 Reproduction Commands
-Sleep Mode (Test Group):
+- Sleep Mode (Test Group):
 - python online_default.py sleep > out_info_sleep.log 2>&1
-No Sleep Mode (Control Group):
+- No Sleep Mode (Control Group):
 - python online_default.py nosleep > out_info_nosleep.log 2>&1
 
 
@@ -22,9 +22,9 @@ Script: online_fp8.py
 Corresponding Result: Table 2 (Sleep mode(without fp8 vs fp8))
 
 Reproduction Commands
-No FP8 (Test Group):
+- No FP8 (Test Group):
 - python online_fp8.py > out_info.log 2>&1
-FP8 (Control Group):
+- FP8 (Control Group):
 - python online_fp8.py fp8 > out_info_fp8.log 2>&1
 
 
@@ -35,9 +35,9 @@ Script: online_sleep1_nowarm.py
 Corresponding Result: Table 3 (Sleep mode vs vLLM 0.11.0 no warmup)
 
 Reproduction Commands
-With Warmup (Test Group):
+- With Warmup (Test Group):
 - python online_sleep1_nowarm.py sleep1 > out_info_sleep1.log 2>&1
-No Warmup (Control Group):
+- No Warmup (Control Group):
 - python online_sleep1_nowarm.py nowarmup > out_info_nowarmup.log 2>&1
 
 
@@ -48,9 +48,9 @@ Script: online_sleep1_2.py
 Corresponding Result: Table 4 (Sleep mode(without fp8) vs Sleep level 2 wake + reload weights)
 
 Reproduction Commands
-Sleep Level 1 (Test Group):
+- Sleep Level 1 (Test Group):
 - python online_sleep1_2.py sleep1  > out_info_sleep1.log 2>&1
-Sleep Level 2 (Control Group):
+- Sleep Level 2 (Control Group):
 - python online_sleep1_2.py sleep2  > out_info_sleep2.log 2>&1
 
 
@@ -61,7 +61,7 @@ Script: online_sleep2_nosleep.py
 Corresponding Result: Table 5 (Sleep level 2 wake + reload weights vs No sleep mode)
 
 Reproduction Commands
-Sleep Level 2 (Test Group):
+- Sleep Level 2 (Test Group):
 - python online_sleep2_nosleep.py sleep2 > out_info_sleep2.log 2>&1
-No Sleep Mode (Control Group):
+- No Sleep Mode (Control Group):
 - python online_sleep2_nosleep.py nosleep > out_info_nosleep.log 2>&1
